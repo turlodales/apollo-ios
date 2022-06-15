@@ -39,7 +39,7 @@ let package = Package(
       targets: ["ApolloTestSupport"]),
     .executable(
       name: "apollo-ios-cli",
-      targets: ["apollo-ios-cli", "CodegenCLITests"]),
+      targets: ["apollo-ios-cli"]),
   ],
   dependencies: [
     .package(
