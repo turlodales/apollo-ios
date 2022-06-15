@@ -181,6 +181,20 @@ class TestMockTests: XCTestCase {
     expect(expected.isEqual(to: mock.listOfOptionalInterfaces as [AnyMock?]?)).to(beTrue())
   }
 
+  // MARK: Argument Field Tests
+
+  func test__mock__setScalarArgumentFieldValue_valueIsSetForArgument() throws {
+    // given
+    let mock = Mock<Cat>()
+
+
+    // when
+    mock.scalarArgField[arg: "1"] = "Test"
+
+    // then
+    expect(mock.scalarArgField[arg: "1"]).to(equal("Test"))
+  }
+
   // MARK: JSONEncodable Tests
 
   func test__jsonValue__givenObjectFieldSetToOtherObject__convertsObjectToJSONDict() throws {
@@ -256,6 +270,14 @@ extension Cat: Mockable {
     @Field<Animal>("bestFriend") public var bestFriend
     @Field<[Animal]>("predators") public var predators
     @Field<String>("species") public var species
+    @Field<ScalarArgField>("scalarArgField") public var scalarArgField
+
+    class ScalarArgField: ArgumentField<String> {
+      subscript(arg arg: String) -> String? {
+        get { parent?._data[ }
+        set { }
+      }
+     }
   }
 }
 
