@@ -36,12 +36,12 @@ public class Mock<O: Mockable>: AnyMock, JSONEncodable, Hashable {
     }
   }
 
-  public subscript<T, F: ArgumentField<T>>(
-    dynamicMember keyPath: KeyPath<O.MockFields, Field<F>>
-  ) -> F {
+  public subscript<T, Args: FieldArguments>(
+    dynamicMember keyPath: KeyPath<O.MockFields, ArgumentField<T, Args>>
+  ) -> Args {
     get {
       let fieldName = O.__mockFields[keyPath: keyPath].key
-      return F.init(self, fieldName: fieldName)
+      return Args.init(self, fieldName: fieldName)
     }
   }
 

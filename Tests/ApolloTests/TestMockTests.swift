@@ -74,8 +74,11 @@ class TestMockTests: XCTestCase {
     // given
     let mock = Mock<Dog>()
     let cat1 = Mock<Cat>()
+    cat1.id = "1"
     let cat2 = Mock<Cat>()
+    cat2.id = "2"
     let cat3 = Mock<Cat>()
+    cat3.id = "3"
 
     // when
     mock.listOfObjects = [cat1, cat2, cat3]
@@ -89,8 +92,11 @@ class TestMockTests: XCTestCase {
     // given
     let mock = Mock<Dog>()
     let cat1 = Mock<Cat>()
+    cat1.id = "1"
     let cat2 = Mock<Cat>()
+    cat2.id = "2"
     let cat3 = Mock<Cat>()
+    cat3.id = "3"
 
     // when
     mock.nestedListOfObjects = [[cat1, cat2, cat3]]
@@ -104,7 +110,9 @@ class TestMockTests: XCTestCase {
     // given
     let mock = Mock<Dog>()
     let cat1 = Mock<Cat>()
+    cat1.id = "1"
     let cat2 = Mock<Cat>()
+    cat2.id = "2"
 
     // when
     mock.listOfOptionalObjects = [cat1, nil, cat2, nil]
@@ -131,8 +139,11 @@ class TestMockTests: XCTestCase {
     // given
     let mock = Mock<Dog>()
     let cat1 = Mock<Cat>()
+    cat1.id = "1"
     let cat2 = Mock<Cat>()
+    cat2.id = "2"
     let dog1 = Mock<Dog>()
+    dog1.id = "3"
 
     let list: [AnyMock] = [cat1, cat2, dog1]
     let expected = NSArray(array: list)
@@ -149,8 +160,11 @@ class TestMockTests: XCTestCase {
     // given
     let mock = Mock<Dog>()
     let cat1 = Mock<Cat>()
+    cat1.id = "1"
     let cat2 = Mock<Cat>()
+    cat2.id = "2"
     let dog1 = Mock<Dog>()
+    dog1.id = "3"
 
     let list: [[AnyMock]] = [[cat1, cat2, dog1]]
     let expected = NSArray(array: list)
@@ -168,7 +182,9 @@ class TestMockTests: XCTestCase {
     // given
     let mock = Mock<Dog>()
     let cat1 = Mock<Cat>()
+    cat1.id = "1"
     let cat2 = Mock<Cat>()
+    cat2.id = "2"    
 
     let list: [AnyMock?] = [cat1, nil, cat2, nil]
     let expected = NSArray(array: list as [Any])
@@ -218,6 +234,51 @@ class TestMockTests: XCTestCase {
       .to(equal(12345))
     expect(mock.scalarMultipleArgNonAlphabeticalField[bArg: "B", aArg: 10])
       .to(equal(12345))
+  }
+
+  func test__mock__setObjectArgumentFieldValue_valueIsSetForArgument() throws {
+    // given
+    let mock = Mock<Cat>()
+    let dog = Mock<Dog>()
+
+    // when
+    mock.object[arg: "1"] = dog
+
+    // then
+    expect(mock._data["object(arg:1)"] as? Mock<Dog>).to(beIdenticalTo(dog))
+    expect(mock.object[arg: "1"]).to(beIdenticalTo(dog))
+  }
+
+  func test__mock__setListOfObjectsArgumentFieldValue_valueIsSetForArgument() throws {
+    // given
+    let mock = Mock<Cat>()
+    let dog1 = Mock<Dog>()
+    dog1.id = "1"
+    let dog2 = Mock<Dog>()
+    dog2.id = "2"
+
+    // when
+    mock.listOfObjects[arg: "1"] = [dog1, dog2]
+
+    // then
+    expect(mock._data["listOfObjects(arg:1)"] as? [Mock<Dog>]).to(equal([dog1, dog2]))
+    expect(mock.listOfObjects[arg: "1"]).to(equal([dog1, dog2]))
+  }
+
+  func test__mock__setListOfOptionalObjectsArgumentFieldValue_valueIsSetForArgument() throws {
+    // given
+    let mock = Mock<Cat>()
+    let dog1 = Mock<Dog>()
+    dog1.id = "1"
+    let dog2 = Mock<Dog>()
+    dog2.id = "2"
+
+    // when
+    mock.listOfOptionalObjects[arg: "1"] = [dog1, nil, dog2, nil]
+
+    // then
+    expect(mock._data["listOfOptionalObjects(arg:1)"] as? [Mock<Dog>?]).to(equal([dog1, nil, dog2, nil]))
+    expect(mock.listOfOptionalObjects[arg: "1"]).to(equal([dog1, nil, dog2, nil]))
   }
 
   // MARK: JSONEncodable Tests
@@ -295,19 +356,38 @@ extension Cat: Mockable {
     @Field<Animal>("bestFriend") public var bestFriend
     @Field<[Animal]>("predators") public var predators
     @Field<String>("species") public var species
+    @ArgumentField<Dog, ObjectArgs>("object") public var object
+    @ArgumentField<[Dog], ListOfObjectsArgs>("listOfObjects") public var listOfObjects
+    @ArgumentField<[Dog?], ListOfOptionalObjectsArgs>("listOfOptionalObjects") public var listOfOptionalObjects    
+    @ArgumentField<String, ScalarArgFieldArgs>("scalarArgField") public var scalarArgField
+    @ArgumentField<Int, ScalarMultipleArgNonAlphabeticalFieldArgs>("scalarMultipleArgNonAlphabeticalField") public var scalarMultipleArgNonAlphabeticalField
 
-    @Field<ScalarArgField>("scalarArgField") public var scalarArgField
-    public class ScalarArgField: ArgumentField<String> {
+    // Field Arguments
+    public class ObjectArgs: FieldArguments {
+      public subscript(arg arg: String) -> Mock<Dog>? {
+        get { getValue(for: ["arg": arg]) }
+        set { set(newValue, for: ["arg": arg]) }
+      }
+    }
+    public class ListOfObjectsArgs: FieldArguments {
+      public subscript(arg arg: String) -> [Mock<Dog>]? {
+        get { getValue(for: ["arg": arg]) }
+        set { set(newValue, for: ["arg": arg]) }
+      }
+    }
+    public class ListOfOptionalObjectsArgs: FieldArguments {
+      public subscript(arg arg: String) -> [Mock<Dog>?]? {
+        get { getValue(for: ["arg": arg]) }
+        set { set(newValue, for: ["arg": arg]) }
+      }
+    }
+    public class ScalarArgFieldArgs: FieldArguments {
       public subscript(arg arg: String) -> String? {
         get { getValue(for: ["arg": arg]) }
         set { set(newValue, for: ["arg": arg]) }
       }
-     }
-
-    @Field<ScalarMultipleArgNonAlphabeticalField>(
-      "scalarMultipleArgNonAlphabeticalField"
-    ) public var scalarMultipleArgNonAlphabeticalField
-    public class ScalarMultipleArgNonAlphabeticalField: ArgumentField<Int> {
+    }
+    public class ScalarMultipleArgNonAlphabeticalFieldArgs: FieldArguments {
       public subscript(
         bArg bArg: String,
         aArg aArg: Int
@@ -315,7 +395,7 @@ extension Cat: Mockable {
         get { getValue(for: ["bArg": bArg, "aArg": aArg]) }
         set { set(newValue, for: ["bArg": bArg, "aArg": aArg]) }
       }
-     }
+    }
   }
 }
 
