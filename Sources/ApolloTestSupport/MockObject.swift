@@ -39,13 +39,9 @@ public class Mock<O: Mockable>: AnyMock, JSONEncodable, Hashable {
   public subscript<T, F: ArgumentField<T>>(
     dynamicMember keyPath: KeyPath<O.MockFields, Field<F>>
   ) -> F {
-    get { F.init(self) }
-//      let field = O.__mockFields[keyPath: keyPath]
-//      return _data[field.key.description] as? T.MockValueCollectionType.Element
-//    }
-    set {
-      let field = O.__mockFields[keyPath: keyPath]
-      _data[field.key.description] = (newValue as! JSONEncodable)
+    get {
+      let fieldName = O.__mockFields[keyPath: keyPath].key
+      return F.init(self, fieldName: fieldName)
     }
   }
 

@@ -14,7 +14,7 @@ public struct Field<T> {
 }
 
 open class ArgumentField<T: JSONEncodable> {
-  public typealias KeyFromArgs = String
+  public typealias Arguments = [String: GraphQLOperationVariableValue]
 
   weak var parent: AnyMock?
   let fieldName: StaticString
@@ -24,27 +24,15 @@ open class ArgumentField<T: JSONEncodable> {
     self.fieldName = fieldName
   }
 
-  public func key(for args: [String: GraphQLOperationVariableValue]) -> KeyFromArgs {
-
+  public func key(for args: [String: GraphQLOperationVariableValue]) -> String {
+    "\(fieldName)(\(CacheKeyComputation.argumentKey(for: args.jsonEncodableObject)))"
   }
 
-  public func set(_ value: T?, for key: KeyFromArgs) {
-    parent?._data[key] = value
+  public func getValue(for arguments: Arguments) -> T? {
+    parent?._data[key(for: arguments)] as? T
+  }
+
+  public func set(_ value: T?, for arguments: Arguments) {
+    parent?._data[key(for: arguments)] = value
   }
 }
-
-//struct ArgResolver<T> {
-//
-//}
-//
-//@propertyWrapper
-//public class ArgField<T, Args> {
-//
-//  let key: StaticString
-//
-//  public init(_ field: StaticString) {
-//    self.key = field
-//  }
-//
-//  public var wrappedValue: T? { nil }
-//}

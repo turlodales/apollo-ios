@@ -187,12 +187,37 @@ class TestMockTests: XCTestCase {
     // given
     let mock = Mock<Cat>()
 
+    // when
+    mock.scalarArgField[arg: "1"] = "Test"
+
+    // then
+    expect((mock._data["scalarArgField(arg:1)"] as? String)).to(equal("Test"))
+    expect(mock.scalarArgField[arg: "1"]).to(equal("Test"))
+  }
+
+  func test__mock__setScalarArgumentFieldValue_valueIsNotSetForOtherArgument() throws {
+    // given
+    let mock = Mock<Cat>()
 
     // when
     mock.scalarArgField[arg: "1"] = "Test"
 
     // then
-    expect(mock.scalarArgField[arg: "1"]).to(equal("Test"))
+    expect(mock.scalarArgField[arg: "2"]).to(beNil())
+  }
+
+  func test__mock__setScalarMultipleArgumentFieldValue_valueIsSetForArgumentsOrderIndependent() throws {
+    // given
+    let mock = Mock<Cat>()
+
+    // when
+    mock.scalarMultipleArgNonAlphabeticalField[bArg: "B", aArg: 10] = 12345
+
+    // then
+    expect((mock._data["scalarMultipleArgNonAlphabeticalField(aArg:10,bArg:B)"] as? Int))
+      .to(equal(12345))
+    expect(mock.scalarMultipleArgNonAlphabeticalField[bArg: "B", aArg: 10])
+      .to(equal(12345))
   }
 
   // MARK: JSONEncodable Tests
@@ -270,12 +295,25 @@ extension Cat: Mockable {
     @Field<Animal>("bestFriend") public var bestFriend
     @Field<[Animal]>("predators") public var predators
     @Field<String>("species") public var species
-    @Field<ScalarArgField>("scalarArgField") public var scalarArgField
 
-    class ScalarArgField: ArgumentField<String> {
-      subscript(arg arg: String) -> String? {
-        get { parent?._data[ }
-        set { }
+    @Field<ScalarArgField>("scalarArgField") public var scalarArgField
+    public class ScalarArgField: ArgumentField<String> {
+      public subscript(arg arg: String) -> String? {
+        get { getValue(for: ["arg": arg]) }
+        set { set(newValue, for: ["arg": arg]) }
+      }
+     }
+
+    @Field<ScalarMultipleArgNonAlphabeticalField>(
+      "scalarMultipleArgNonAlphabeticalField"
+    ) public var scalarMultipleArgNonAlphabeticalField
+    public class ScalarMultipleArgNonAlphabeticalField: ArgumentField<Int> {
+      public subscript(
+        bArg bArg: String,
+        aArg aArg: Int
+      ) -> Int? {
+        get { getValue(for: ["bArg": bArg, "aArg": aArg]) }
+        set { set(newValue, for: ["bArg": bArg, "aArg": aArg]) }
       }
      }
   }
