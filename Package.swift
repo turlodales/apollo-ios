@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.6
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -37,6 +37,9 @@ let package = Package(
     .library(
       name: "ApolloTestSupport",
       targets: ["ApolloTestSupport"]),
+    .executable(
+      name: "apollo-ios-cli",
+      targets: ["apollo-ios-cli", "CodegenCLITests"]),
   ],
   dependencies: [
     .package(
@@ -47,7 +50,13 @@ let package = Package(
       .upToNextMinor(from: "1.0.0")),
     .package(
       url: "https://github.com/apple/swift-collections",
-      .upToNextMajor(from: "1.0.0"))
+      .upToNextMajor(from: "1.0.0")),
+    .package(
+      url: "https://github.com/apple/swift-argument-parser.git",
+      .upToNextMajor(from: "1.1.2")),
+    .package(
+      url: "https://github.com/Quick/Nimble.git",
+      .upToNextMajor(from: "10.0.0")),
   ],
   targets: [
     .target(
@@ -109,5 +118,21 @@ let package = Package(
       exclude: [
         "Info.plist"
       ]),
+    .executableTarget(
+      name: "apollo-ios-cli",
+      dependencies: [
+        "ApolloCodegenLib",
+        .product(name: "ArgumentParser", package: "swift-argument-parser"),
+      ],
+      path: "./CodegenCLI/Sources"
+    ),
+    .testTarget(
+      name: "CodegenCLITests",
+      dependencies: [
+        "apollo-ios-cli",
+        "Nimble",
+      ],
+      path: "./CodegenCLI/Tests"
+    ),
   ]
 )
