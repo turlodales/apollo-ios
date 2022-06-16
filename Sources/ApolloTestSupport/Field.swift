@@ -13,24 +13,13 @@ public struct Field<T> {
 
 }
 
-@propertyWrapper
-public struct ArgumentField<T, Args: FieldArguments> {
-
-  let key: StaticString
-
-  public init(_ field: StaticString) {
-    self.key = field
-  }
-
-  public var wrappedValue: Self { self }
-
-}
+public typealias ArgumentField<T, Args: FieldArguments> = Field<Args>
 
 open class FieldArguments {
   public typealias Arguments = [String: GraphQLOperationVariableValue]
 
-  weak var parent: AnyMock?
-  let fieldName: StaticString
+  private weak var parent: AnyMock?
+  private let fieldName: StaticString
 
   public required init(_ parent: AnyMock, fieldName: StaticString) {
     self.parent = parent
