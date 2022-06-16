@@ -13,7 +13,7 @@ public enum Selection {
   public struct Field {
     public let name: String
     public let alias: String?
-    public let arguments: [String: InputValue]?
+    public let arguments: [String: AnyHashable]?
     public let type: OutputType
 
     public var responseKey: String {

@@ -34,39 +34,49 @@ extension Selection.Field {
 }
 
 extension InputValue {
-  private func evaluate(with variables: GraphQLOperation.Variables?) throws -> JSONValue? {
-    switch self {
-    case let .variable(name):
-      guard let value = variables?[name] else {
-        throw GraphQLError("Variable \"\(name)\" was not provided.")
+  private static func evaluate(
+    _ value: AnyHashable,
+    with variables: GraphQLOperation.Variables?
+  ) throws -> JSONValue? {
+    switch value {
+    case let string as String:
+      if string.hasPrefix("$") {
+        guard let value = variables?[string] else {
+          throw GraphQLError("Variable \"\(string)\" was not provided.")
+        }
+        return value.jsonEncodableValue?.jsonValue
+      } else {
+        return string
       }
-      return value.jsonEncodableValue?.jsonValue
 
-    case let .scalar(value):
+    case let value as AnyScalarType:
       return value.jsonValue
 
-    case let .list(array):
+    case let array as [AnyHashable]:
       return try InputValue.evaluate(array, with: variables)
 
-    case let .object(dictionary):
+    case let dictionary as [String: AnyHashable]:
       return try InputValue.evaluate(dictionary, with: variables)
 
-    case .null:
+    case is NSNull:
       return NSNull()
+
+    default:
+      return nil    
     }
   }
 
   fileprivate static func evaluate(
-    _ values: [InputValue],
+    _ values: [AnyHashable],
     with variables: GraphQLOperation.Variables?
   ) throws -> [JSONValue] {
-    try values.compactMap { try $0.evaluate(with: variables) }
+    try values.compactMap { try evaluate($0, with: variables) }
   }
 
   fileprivate static func evaluate(
-    _ values: [String: InputValue],
+    _ values: [String: AnyHashable],
     with variables: GraphQLOperation.Variables?
   ) throws -> JSONObject {
-    try values.compactMapValues { try $0.evaluate(with: variables) }
+    try values.compactMapValues { try evaluate($0, with: variables) }
   }
 }
