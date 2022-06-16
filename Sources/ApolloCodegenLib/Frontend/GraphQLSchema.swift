@@ -101,6 +101,7 @@ public class GraphQLCompositeType: GraphQLNamedType {
 
 protocol GraphQLInterfaceImplementingType: GraphQLCompositeType {
   var interfaces: [GraphQLInterfaceType] { get }
+  var fields: [String: GraphQLField] { get }
 }
 
 extension GraphQLInterfaceImplementingType {

@@ -2,7 +2,7 @@ extension IR {
 
   class FieldCollector {
 
-    private var collectedFields: [GraphQLCompositeType: [String: GraphQLType]] = [:]
+    private var collectedFields: [GraphQLCompositeType: [String: GraphQLField]] = [:]
 
     func collectFields(from selectionSet: CompilationResult.SelectionSet) {
       guard let type = selectionSet.parentType as? GraphQLInterfaceImplementingType else { return }
@@ -25,23 +25,26 @@ extension IR {
       to type: GraphQLInterfaceImplementingType
     ) {
       var fields = collectedFields[type] ?? [:]
-      add(field, to: &fields)
+      guard let fieldOnType = type.fields[field.name] else {
+        preconditionFailure("Cannot find field named '\(field.name)' on type '\(type.name)'.")
+      }
+      add(fieldOnType, to: &fields)
       collectedFields.updateValue(fields, forKey: type)
     }
 
     private func add(
-      _ field: CompilationResult.Field,
-    to referencedFields: inout [String: GraphQLType]
+      _ field: GraphQLField,
+      to referencedFields: inout [String: GraphQLField]
     ) {
       let key = field.responseKey
       if !referencedFields.keys.contains(key) {
-        referencedFields[key] = field.type
+        referencedFields[key] = field
       }
     }
 
     func collectedFields(
       for type: GraphQLInterfaceImplementingType
-    ) -> [(String, GraphQLType)] {
+    ) -> [(String, GraphQLField)] {
       var fields = collectedFields[type] ?? [:]
 
       for interface in type.interfaces {

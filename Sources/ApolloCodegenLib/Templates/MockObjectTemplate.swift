@@ -13,16 +13,24 @@ struct MockObjectTemplate: TemplateRenderer {
   let target: TemplateTarget = .testMockFile
 
   var template: TemplateString {
+    typealias FieldInfo = (
+      name: String,
+      type: String,
+      arguments: [GraphQLFieldArgument]?,
+      mockType: String
+    )
+
     let objectName = graphqlObject.name.firstUppercased
-    let fields: [(name: String, type: String, mockType: String)] = ir.fieldCollector
-      .collectedFields(for: graphqlObject)
-      .map {
-        (
-          name: $0.0,
-          type: $0.1.rendered(containedInNonNull: true, inSchemaNamed: ir.schema.name),
-          mockType: mockTypeName(for: $0.1)
-        )
-      }
+    var allFields: [FieldInfo], argumentFields: [FieldInfo]
+
+    for (fieldName, field) in ir.fieldCollector.collectedFields(for: graphqlObject) {
+      let fieldInfo = (
+        name: fieldName,
+        type: field.type.rendered(containedInNonNull: true, inSchemaNamed: ir.schema.name),
+        arguments: field.arguments,
+        mockType: mockTypeName(for: field.type)
+      )
+    }
 
     return """
     extension \

@@ -91,7 +91,7 @@ class MockObjectTemplateTests: XCTestCase {
 
   // MARK: Class Definition Tests
 
-  func test_render_givenSchemaType_generatesExtensionCorrectlyCased() {
+  func test_render_givenSchemaTypeWithLowercaseName_generatesExtensionCorrectlyCased() {
     // given
     buildSubject(name: "dog")
 
@@ -108,7 +108,7 @@ class MockObjectTemplateTests: XCTestCase {
 
   // MARK: Field Accessor Tests
 
-  func test_render_givenSchemaType_generatesFieldAccessors() {
+  func test_render_givenFields_generatesFieldAccessors() {
     // given
     buildSubject()
 
@@ -149,9 +149,133 @@ class MockObjectTemplateTests: XCTestCase {
     expect(actual).to(equalLineByLine(expected, atLine: 6, ignoringExtraLines: true))
   }
 
+  func test_render_givenArgumentFields_generatesFieldAccessors() {
+    // given
+    buildSubject()
+
+    let Cat: GraphQLType = .entity(.mock("Cat"))
+
+    subject.graphqlObject.fields = [
+      "string": .mock(
+        "string",
+        arguments: ["arg": .nonNull(.string())],
+        type: .nonNull(.string())),
+      "customScalar": .mock(
+        "customScalar",
+        arguments: ["arg": .nonNull(.string())],
+        type: .nonNull(.scalar(.mock(name: "CustomScalar")))),
+      "optionalString": .mock(
+        "optionalString",
+        arguments: ["arg": .nonNull(.string())],
+        type: .string()),
+      "object": .mock(
+        "object",
+        arguments: ["arg": .nonNull(.string())],
+        type: Cat),
+      "objectList": .mock(
+        "objectList",
+        arguments: ["arg": .nonNull(.string())],
+        type: .list(.nonNull(Cat))),
+      "objectNestedList": .mock(
+        "objectNestedList",
+        arguments: ["arg": .nonNull(.string())],
+        type: .list(.nonNull(.list(.nonNull(Cat))))),
+      "objectOptionalList": .mock(
+        "objectOptionalList",
+        arguments: ["arg": .nonNull(.string())],
+        type: .list(Cat)),
+    ]
+
+    ir.fieldCollector.add(
+      fields: subject.graphqlObject.fields.values.map {
+        .mock($0.name, type: $0.type)
+      },
+      to: subject.graphqlObject
+    )
+
+    let expected = """
+      public struct MockFields {
+        @ArgumentField<TestSchema.CustomScalar, CustomScalarArgs>("customScalar") public var customScalar
+        @ArgumentField<Cat, ObjectArgs>("object") public var object
+        @ArgumentField<[Cat], ObjectListArgs>("objectList") public var objectList
+        @ArgumentField<[[Cat]], ObjectNestedListArgs>("objectNestedList") public var objectNestedList
+        @ArgumentField<[Cat?], ObjectOptionalListArgs>("objectOptionalList") public var objectOptionalList
+        @ArgumentField<String, OptionalStringArgs>("optionalString") public var optionalString
+        @ArgumentField<String, StringArgs>("string") public var string
+      }
+    """
+    // when
+    let actual = renderSubject()
+
+    // then
+    expect(actual).to(equalLineByLine(expected, atLine: 6, ignoringExtraLines: true))
+  }
+
+//  func test_render_givenArgumentFieldWithMultipleArguments_generatesFieldAccessors() {
+//    // given
+//    buildSubject()
+//
+//    let Cat: GraphQLType = .entity(.mock("Cat"))
+//
+//    subject.graphqlObject.fields = [
+//      "string": .mock(
+//        "string",
+//        arguments: ["arg": .nonNull(.string())],
+//        type: .nonNull(.string())),
+//      "customScalar": .mock(
+//        "customScalar",
+//        arguments: ["arg": .nonNull(.string())],
+//        type: .nonNull(.scalar(.mock(name: "CustomScalar")))),
+//      "optionalString": .mock(
+//        "optionalString",
+//        arguments: ["arg": .nonNull(.string())],
+//        type: .string()),
+//      "object": .mock(
+//        "object",
+//        arguments: ["arg": .nonNull(.string())],
+//        type: Cat),
+//      "objectList": .mock(
+//        "objectList",
+//        arguments: ["arg": .nonNull(.string())],
+//        type: .list(.nonNull(Cat))),
+//      "objectNestedList": .mock(
+//        "objectNestedList",
+//        arguments: ["arg": .nonNull(.string())],
+//        type: .list(.nonNull(.list(.nonNull(Cat))))),
+//      "objectOptionalList": .mock(
+//        "objectOptionalList",
+//        arguments: ["arg": .nonNull(.string())],
+//        type: .list(Cat)),
+//    ]
+//
+//    ir.fieldCollector.add(
+//      fields: subject.graphqlObject.fields.values.map {
+//        .mock($0.name, type: $0.type)
+//      },
+//      to: subject.graphqlObject
+//    )
+//
+//    let expected = """
+//      public struct MockFields {
+//        @ArgumentField<TestSchema.CustomScalar, CustomScalarArgs>("customScalar") public var customScalar
+//        @ArgumentField<Cat, ObjectArgs>("object") public var object
+//        @ArgumentField<[Cat], ObjectListArgs>("objectList") public var objectList
+//        @ArgumentField<[[Cat]], ObjectNestedListArgs>("objectNestedList") public var objectNestedList
+//        @ArgumentField<[Cat?], ObjectOptionalListArgs>("objectOptionalList") public var objectOptionalList
+//        @ArgumentField<String, OptionalStringArgs>("optionalString") public var optionalString
+//        @ArgumentField<String, StringArgs>("string") public var string
+//      }
+//    """
+//    // when
+//    let actual = renderSubject()
+//
+//    // then
+//    expect(actual).to(equalLineByLine(expected, atLine: 6, ignoringExtraLines: true))
+//  }
+
   // MARK: Convenience Initializer Tests
 
-  func test_render_givenSchemaType_generatesConvenienceInitializer() {
+  func test_render_givenFields_generatesConvenienceInitializer() {
     // given
     buildSubject()
 
@@ -205,7 +329,7 @@ class MockObjectTemplateTests: XCTestCase {
     expect(actual).to(equalLineByLine(expected, atLine: 15, ignoringExtraLines: true))
   }
 
-  func test_render_givenSchemaType_withInterfaceTypedFields_generatesConvenienceInitializer() {
+  func test_render_givenInterfaceTypedFields_generatesConvenienceInitializer() {
     // given
     buildSubject()
 
@@ -259,7 +383,7 @@ class MockObjectTemplateTests: XCTestCase {
     expect(actual).to(equalLineByLine(expected, atLine: 15, ignoringExtraLines: true))
   }
 
-  func test_render_givenSchemaType_withUnionTypedFields_generatesConvenienceInitializer() {
+  func test_render_givenUnionTypedFields_generatesConvenienceInitializer() {
     // given
     buildSubject()
 
