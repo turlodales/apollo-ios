@@ -49,7 +49,7 @@ class CacheKeyForFieldTests: XCTestCase {
     let field = Selection.Field("hero",
                                 type: .scalar(String.self),
                                 arguments: ["nested": ["foo": 1, "bar": InputValue.null]])
-    XCTAssertEqual(field.test_cacheKey, "hero([nested:bar:null,foo:1])")
+    XCTAssertEqual(field.test_cacheKey, "hero(nested:[bar:null,foo:1])")
   }
 
   func testFieldWithArgumentOmitted() {
@@ -66,13 +66,13 @@ class CacheKeyForFieldTests: XCTestCase {
     let field = Selection.Field("hero",
                                 type: .scalar(String.self),
                                 arguments: ["nested": ["foo": 1, "bar": "2"]])
-    XCTAssertEqual(field.test_cacheKey, "hero([nested:bar:2,foo:1])")
+    XCTAssertEqual(field.test_cacheKey, "hero(nested:[bar:2,foo:1])")
   }
   
   func testFieldWithDictionaryArgumentWithVariables() throws {
     let field = Selection.Field("hero", type: .scalar(String.self), arguments: ["nested": ["foo": InputValue.variable("a"), "bar": InputValue.variable("b")]])
     let variables: GraphQLOperation.Variables = ["a": 1, "b": "2"]
-    XCTAssertEqual(try field.cacheKey(with: variables), "hero([nested:bar:2,foo:1])")
+    XCTAssertEqual(try field.cacheKey(with: variables), "hero(nested:[bar:2,foo:1])")
   }
   
   func testFieldWithMultipleArgumentsIsOrderIndependent() {
@@ -108,6 +108,6 @@ class CacheKeyForFieldTests: XCTestCase {
   func testFieldWithVariableArgumentWithNestedNull() throws {
     let field = Selection.Field("hero", type: .scalar(String.self), arguments: ["nested": ["foo": InputValue.variable("a"), "bar": InputValue.variable("b")]])
     let variables: GraphQLOperation.Variables = ["a": 1, "b": GraphQLNullable<String>.null]
-    XCTAssertEqual(try field.cacheKey(with: variables), "hero([nested:bar:null,foo:1])")
+    XCTAssertEqual(try field.cacheKey(with: variables), "hero(nested:[bar:null,foo:1])")
   }
 }

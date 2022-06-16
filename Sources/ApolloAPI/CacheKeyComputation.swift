@@ -8,7 +8,7 @@ public enum CacheKeyComputation {
     return arguments.sorted { $0.key < $1.key }.map {
       switch $0.value {
       case let object as JSONEncodableDictionary:
-        return "[\($0.key):\(argumentKey(for: object))]"
+        return "\($0.key):[\(argumentKey(for: object))]"
       case let array as [JSONEncodableDictionary]:
         return "\($0.key):[\(array.map { argumentKey(for: $0) }.joined(separator: ","))]"
       case let array as [JSONEncodable]:

@@ -236,17 +236,23 @@ class TestMockTests: XCTestCase {
       .to(equal(12345))
   }
 
-  func test__mock__setObjectArgumentFieldValue_valueIsSetForArgument() throws {
+  func test__mock__setValueForFieldWithInputObjectArgument_valueIsSetForInputObjectArgument() throws {
     // given
     let mock = Mock<Cat>()
     let dog = Mock<Dog>()
+    let cat = Mock<Cat>()
+    let dogInputObject = PetInput(species: ["Dog"])
+    let catInputObject = PetInput(species: ["Cat"])
 
     // when
-    mock.object[arg: "1"] = dog
+    mock.inputObjectArg[inputObject: dogInputObject] = dog
+    mock.inputObjectArg[inputObject: catInputObject] = cat
 
     // then
-    expect(mock._data["object(arg:1)"] as? Mock<Dog>).to(beIdenticalTo(dog))
-    expect(mock.object[arg: "1"]).to(beIdenticalTo(dog))
+    expect(mock._data["inputObjectArg(inputObject:[species:[Dog]])"] as? Mock<Dog>).to(beIdenticalTo(dog))
+    expect(mock._data["inputObjectArg(inputObject:[species:[Cat]])"] as? Mock<Cat>).to(beIdenticalTo(cat))
+    expect(mock.inputObjectArg[inputObject: dogInputObject]).to(beIdenticalTo(dog))
+    expect(mock.inputObjectArg[inputObject: catInputObject]).to(beIdenticalTo(cat))
   }
 
   func test__mock__setListOfObjectsArgumentFieldValue_valueIsSetForArgument() throws {
@@ -336,6 +342,8 @@ class TestMockTests: XCTestCase {
   }
 }
 
+// MARK: - Test Schema Objects
+
 class Dog: Object {
   override public class var __typename: StaticString { "Dog" }
   override public class var __implementedInterfaces: [Interface.Type]? { _implementedInterfaces }
@@ -357,6 +365,28 @@ class Height: Object {
 }
 
 class Animal: Interface {}
+
+class PetInput: InputObject {
+
+  public private(set) var data: InputDict
+
+  public init(_ data: InputDict) {
+    self.data = data
+  }
+
+  public init(
+    species: [String]
+  ) {
+    data = InputDict([
+      "species": species
+    ])
+  }
+
+  public var species: [String] {
+    get { data.species }
+    set { data.species = newValue }
+  }
+}
 
 // MARK: Mockable Extensions
 
@@ -394,6 +424,7 @@ extension Cat: Mockable {
     @ArgumentField<Animal, InterfaceArgs>("interface") public var interface
     @ArgumentField<String, ScalarArgFieldArgs>("scalarArgField") public var scalarArgField
     @ArgumentField<Int, ScalarMultipleArgNonAlphabeticalFieldArgs>("scalarMultipleArgNonAlphabeticalField") public var scalarMultipleArgNonAlphabeticalField
+    @ArgumentField<Animal, InputObjectArgArgs>("inputObjectArg") public var inputObjectArg
 
     // Field Arguments
     public class ObjectArgs: FieldArguments {
@@ -439,6 +470,12 @@ extension Cat: Mockable {
       ) -> Int? {
         get { getValue(for: ["bArg": bArg, "aArg": aArg]) }
         set { set(newValue, for: ["bArg": bArg, "aArg": aArg]) }
+      }
+    }
+    public class InputObjectArgArgs: FieldArguments {
+      public subscript(inputObject inputObject: PetInput) -> AnyMock? {
+        get { getValue(for: ["inputObject": inputObject]) }
+        set { set(newValue, for: ["inputObject": inputObject]) }
       }
     }
   }
