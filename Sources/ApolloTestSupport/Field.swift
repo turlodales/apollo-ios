@@ -48,4 +48,12 @@ open class FieldArguments {
   public func set<T: JSONEncodable>(_ value: T?, for arguments: Arguments) {
     parent?._data[key(for: arguments)] = value
   }
+
+  public func getValue(for arguments: Arguments) -> AnyMock? {
+    parent?._data[key(for: arguments)] as? AnyMock
+  }
+
+  public func set(_ value: AnyMock?, for arguments: Arguments) {
+    parent?._data[key(for: arguments)] = value
+  }
 }

@@ -281,6 +281,37 @@ class TestMockTests: XCTestCase {
     expect(mock.listOfOptionalObjects[arg: "1"]).to(equal([dog1, nil, dog2, nil]))
   }
 
+  func test__mock__setNestedListOfObjectsArgumentFieldValue_valueIsSetForArgument() throws {
+    // given
+    let mock = Mock<Cat>()
+    let dog1 = Mock<Dog>()
+    dog1.id = "1"
+    let dog2 = Mock<Dog>()
+    dog2.id = "2"
+
+    // when
+    mock.nestedListOfObjects[arg: "1"] = [[dog2], [dog1, dog2]]
+
+    // then
+    expect(mock._data["nestedListOfObjects(arg:1)"] as? [[Mock<Dog>]])
+      .to(equal([[dog2], [dog1, dog2]]))
+    expect(mock.nestedListOfObjects[arg: "1"])
+      .to(equal([[dog2], [dog1, dog2]]))
+  }
+
+  func test__mock__setInterfaceArgumentFieldValue_valueIsSetForArgument() throws {
+    // given
+    let mock = Mock<Cat>()
+    let dog = Mock<Dog>()
+
+    // when
+    mock.interface[arg: "1"] = dog
+
+    // then
+    expect(mock._data["interface(arg:1)"] as? Mock<Dog>).to(beIdenticalTo(dog))
+    expect(mock.interface[arg: "1"]).to(beIdenticalTo(dog))
+  }
+
   // MARK: JSONEncodable Tests
 
   func test__jsonValue__givenObjectFieldSetToOtherObject__convertsObjectToJSONDict() throws {
@@ -358,7 +389,9 @@ extension Cat: Mockable {
     @Field<String>("species") public var species
     @ArgumentField<Dog, ObjectArgs>("object") public var object
     @ArgumentField<[Dog], ListOfObjectsArgs>("listOfObjects") public var listOfObjects
-    @ArgumentField<[Dog?], ListOfOptionalObjectsArgs>("listOfOptionalObjects") public var listOfOptionalObjects    
+    @ArgumentField<[Dog?], ListOfOptionalObjectsArgs>("listOfOptionalObjects") public var listOfOptionalObjects
+    @ArgumentField<[[Dog]], NestedListOfObjectsArgs>("nestedListOfObjects") public var nestedListOfObjects
+    @ArgumentField<Animal, InterfaceArgs>("interface") public var interface
     @ArgumentField<String, ScalarArgFieldArgs>("scalarArgField") public var scalarArgField
     @ArgumentField<Int, ScalarMultipleArgNonAlphabeticalFieldArgs>("scalarMultipleArgNonAlphabeticalField") public var scalarMultipleArgNonAlphabeticalField
 
@@ -377,6 +410,18 @@ extension Cat: Mockable {
     }
     public class ListOfOptionalObjectsArgs: FieldArguments {
       public subscript(arg arg: String) -> [Mock<Dog>?]? {
+        get { getValue(for: ["arg": arg]) }
+        set { set(newValue, for: ["arg": arg]) }
+      }
+    }
+    public class NestedListOfObjectsArgs: FieldArguments {
+      public subscript(arg arg: String) -> [[Mock<Dog>]]? {
+        get { getValue(for: ["arg": arg]) }
+        set { set(newValue, for: ["arg": arg]) }
+      }
+    }
+    public class InterfaceArgs: FieldArguments {
+      public subscript(arg arg: String) -> AnyMock? {
         get { getValue(for: ["arg": arg]) }
         set { set(newValue, for: ["arg": arg]) }
       }
