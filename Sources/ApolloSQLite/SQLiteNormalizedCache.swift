@@ -13,7 +13,7 @@ public final class SQLiteNormalizedCache {
 
   private let shouldVacuumOnClear: Bool
   
-  let database: SQLiteDatabase
+  let database: any SQLiteDatabase
 
   /// Designated initializer
   ///
@@ -22,14 +22,14 @@ public final class SQLiteNormalizedCache {
   ///   - shouldVacuumOnClear: If the database should also be `VACCUM`ed on clear to remove all traces of info. Defaults to `false` since this involves a performance hit, but this should be used if you are storing any Personally Identifiable Information in the cache.
   /// - Throws: Any errors attempting to open or create the database.
   public init(fileURL: URL,
-              databaseType: SQLiteDatabase.Type = SQLiteDotSwiftDatabase.self,
+              databaseType: any SQLiteDatabase.Type = SQLiteDotSwiftDatabase.self,
               shouldVacuumOnClear: Bool = false) throws {
     self.database = try databaseType.init(fileURL: fileURL)
     self.shouldVacuumOnClear = shouldVacuumOnClear
     try self.database.createRecordsTableIfNeeded()
   }
 
-  public init(database: SQLiteDatabase,
+  public init(database: any SQLiteDatabase,
               shouldVacuumOnClear: Bool = false) throws {
     self.database = database
     self.shouldVacuumOnClear = shouldVacuumOnClear
@@ -61,17 +61,21 @@ public final class SQLiteNormalizedCache {
     var recordSet = RecordSet(records: try self.selectRecords(for: records.keys))
     let changedFieldKeys = recordSet.merge(records: records)
     let changedRecordKeys = changedFieldKeys.map { self.recordCacheKey(forFieldCacheKey: $0) }
-    for recordKey in Set(changedRecordKeys) {
-      if let recordFields = recordSet[recordKey]?.fields {
-        let recordData = try SQLiteSerialization.serialize(fields: recordFields)
-        guard let recordString = String(data: recordData, encoding: .utf8) else {
-          assertionFailure("Serialization should yield UTF-8 data")
-          continue
+
+    let serializedRecords = try Set(changedRecordKeys)
+      .compactMap { recordKey -> (CacheKey, String)? in
+        if let recordFields = recordSet[recordKey]?.fields {
+          let recordData = try SQLiteSerialization.serialize(fields: recordFields)
+          guard let recordString = String(data: recordData, encoding: .utf8) else {
+            assertionFailure("Serialization should yield UTF-8 data")
+            return nil
+          }
+          return (recordKey, recordString)
         }
-        
-        try self.database.addOrUpdateRecordString(recordString, for: recordKey)
+        return nil
       }
-    }
+
+    try self.database.addOrUpdate(records: serializedRecords)
     return Set(changedFieldKeys)
   }
   

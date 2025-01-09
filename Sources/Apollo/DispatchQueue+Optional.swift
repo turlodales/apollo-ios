@@ -1,11 +1,6 @@
-import Foundation
-#if !COCOAPODS
-import ApolloUtils
-#endif
+import Dispatch
 
-extension DispatchQueue: ApolloCompatible {}
-
-public extension ApolloExtension where Base == DispatchQueue {
+extension DispatchQueue {
 
   static func performAsyncIfNeeded(on callbackQueue: DispatchQueue?, action: @escaping () -> Void) {
     if let callbackQueue = callbackQueue {
@@ -20,8 +15,8 @@ public extension ApolloExtension where Base == DispatchQueue {
   }
 
   static func returnResultAsyncIfNeeded<T>(on callbackQueue: DispatchQueue?,
-                                           action: ((Result<T, Error>) -> Void)?,
-                                           result: Result<T, Error>) {
+                                           action: ((Result<T, any Swift.Error>) -> Void)?,
+                                           result: Result<T, any Swift.Error>) {
     if let action = action {
       self.performAsyncIfNeeded(on: callbackQueue) {
         action(result)

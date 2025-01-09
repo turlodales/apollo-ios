@@ -1,5 +1,8 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.9
+//
 // The swift-tools-version declares the minimum version of Swift required to build this package.
+// Swift 5.9 is available from Xcode 15.0.
+
 
 import PackageDescription
 
@@ -9,90 +12,83 @@ let package = Package(
     .iOS(.v12),
     .macOS(.v10_14),
     .tvOS(.v12),
-    .watchOS(.v5)
+    .watchOS(.v5),
+    .visionOS(.v1),
   ],
   products: [
-    .library(
-      name: "Apollo",
-      targets: ["Apollo"]),
-    .library(
-      name: "ApolloAPI",
-      targets: ["ApolloAPI"]),
-    .library(
-      name: "ApolloUtils",
-      targets: ["ApolloUtils"]),
-    .library(
-      name: "Apollo-Dynamic",
-      type: .dynamic,
-      targets: ["Apollo"]),
-    .library(
-      name: "ApolloCodegenLib",
-      targets: ["ApolloCodegenLib"]),
-    .library(
-      name: "ApolloSQLite",
-      targets: ["ApolloSQLite"]),
-    .library(
-      name: "ApolloWebSocket",
-      targets: ["ApolloWebSocket"]),
+    .library(name: "Apollo", targets: ["Apollo"]),
+    .library(name: "ApolloAPI", targets: ["ApolloAPI"]),
+    .library(name: "Apollo-Dynamic", type: .dynamic, targets: ["Apollo"]),
+    .library(name: "ApolloSQLite", targets: ["ApolloSQLite"]),
+    .library(name: "ApolloWebSocket", targets: ["ApolloWebSocket"]),
+    .library(name: "ApolloTestSupport", targets: ["ApolloTestSupport"]),
+    .plugin(name: "InstallCLI", targets: ["Install CLI"])
   ],
   dependencies: [
     .package(
       url: "https://github.com/stephencelis/SQLite.swift.git",
-      .upToNextMinor(from: "0.13.1"))
+      .upToNextMajor(from: "0.15.1")),
   ],
   targets: [
     .target(
       name: "Apollo",
       dependencies: [
-        "ApolloAPI",
-        "ApolloUtils"
+        "ApolloAPI"
       ],
-      exclude: [
-        "Info.plist"
-      ]),
+      resources: [
+        .copy("Resources/PrivacyInfo.xcprivacy")
+      ],
+      swiftSettings: [.enableUpcomingFeature("ExistentialAny")]
+    ),
     .target(
       name: "ApolloAPI",
       dependencies: [],
-      exclude: [
-        "Info.plist",
-        "CodegenV1"
-      ]),
-    .target(
-      name: "ApolloUtils",
-      dependencies: [],
-      exclude: [
-        "Info.plist"
-      ]),
-    .target(
-      name: "ApolloCodegenLib",
-      dependencies: [
-        "ApolloUtils",
-      ],
-      exclude: [
-        "Info.plist",
-        "Frontend/JavaScript",
-      ],
       resources: [
-        .copy("Frontend/dist/ApolloCodegenFrontend.bundle.js"),
-        .copy("Frontend/dist/ApolloCodegenFrontend.bundle.js.map")
-      ]),
+        .copy("Resources/PrivacyInfo.xcprivacy")
+      ],
+      swiftSettings: [.enableUpcomingFeature("ExistentialAny")]
+    ),
     .target(
       name: "ApolloSQLite",
       dependencies: [
         "Apollo",
         .product(name: "SQLite", package: "SQLite.swift"),
       ],
-      exclude: [
-        "Info.plist"
-      ]),
+      resources: [
+        .copy("Resources/PrivacyInfo.xcprivacy")
+      ],
+      swiftSettings: [.enableUpcomingFeature("ExistentialAny")]
+    ),
     .target(
       name: "ApolloWebSocket",
       dependencies: [
-        "Apollo",
-        "ApolloUtils"
+        "Apollo"
       ],
-      exclude: [
-        "Info.plist"
-      ])
+      resources: [
+        .copy("Resources/PrivacyInfo.xcprivacy")
+      ],
+      swiftSettings: [.enableUpcomingFeature("ExistentialAny")]
+    ),
+    .target(
+      name: "ApolloTestSupport",
+      dependencies: [
+        "Apollo",
+        "ApolloAPI"
+      ],
+      swiftSettings: [.enableUpcomingFeature("ExistentialAny")]
+    ),
+    .plugin(
+      name: "Install CLI",
+      capability: .command(
+        intent: .custom(
+          verb: "apollo-cli-install",
+          description: "Installs the Apollo iOS Command line interface."),
+        permissions: [
+          .writeToPackageDirectory(reason: "Downloads and unzips the CLI executable into your project directory."),
+          .allowNetworkConnections(scope: .all(ports: []), reason: "Downloads the Apollo iOS CLI executable from the GitHub Release.")
+        ]),
+      dependencies: [],
+      path: "Plugins/InstallCLI"
+    )
   ]
 )

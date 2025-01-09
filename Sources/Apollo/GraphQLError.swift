@@ -1,9 +1,12 @@
 import Foundation
+#if !COCOAPODS
+import ApolloAPI
+#endif
 
 /// Represents an error encountered during the execution of a GraphQL operation.
 ///
 ///  - SeeAlso: [The Response Format section in the GraphQL specification](https://facebook.github.io/graphql/#sec-Response-Format)
-public struct GraphQLError: Error {
+public struct GraphQLError: Error, Hashable {
   private let object: JSONObject
 
   public init(_ object: JSONObject) {
@@ -29,6 +32,11 @@ public struct GraphQLError: Error {
     return (self["locations"] as? [JSONObject])?.compactMap(Location.init)
   }
 
+  /// A path to the field that triggered the error, represented by an array of Path Entries.
+  public var path: [PathEntry]? {
+    return (self["path"] as? [JSONValue])?.compactMap(PathEntry.init)
+  }
+
   /// A dictionary which services can use however they see fit to provide additional information in errors to clients.
   public var extensions: [String : Any]? {
     return self["extensions"] as? [String : Any]
@@ -47,6 +55,8 @@ public struct GraphQLError: Error {
       self.column = column
     }
   }
+
+  public typealias PathEntry = PathComponent
 }
 
 extension GraphQLError: CustomStringConvertible {
@@ -58,5 +68,11 @@ extension GraphQLError: CustomStringConvertible {
 extension GraphQLError: LocalizedError {
   public var errorDescription: String? {
     return self.description
+  }
+}
+
+extension GraphQLError {
+  func asJSONDictionary() -> [String: Any] {
+    JSONConverter.convert(self)
   }
 }

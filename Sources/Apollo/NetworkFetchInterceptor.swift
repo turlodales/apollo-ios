@@ -1,12 +1,14 @@
 import Foundation
 #if !COCOAPODS
-import ApolloUtils
+import ApolloAPI
 #endif
 
 /// An interceptor which actually fetches data from the network.
 public class NetworkFetchInterceptor: ApolloInterceptor, Cancellable {
   let client: URLSessionClient
-  private var currentTask: Atomic<URLSessionTask?> = Atomic(nil)
+  @Atomic private var currentTask: URLSessionTask?
+
+  public var id: String = UUID().uuidString
   
   /// Designated initializer.
   ///
@@ -16,56 +18,70 @@ public class NetworkFetchInterceptor: ApolloInterceptor, Cancellable {
   }
   
   public func interceptAsync<Operation: GraphQLOperation>(
-    chain: RequestChain,
+    chain: any RequestChain,
     request: HTTPRequest<Operation>,
     response: HTTPResponse<Operation>?,
-    completion: @escaping (Result<GraphQLResult<Operation.Data>, Error>) -> Void) {
+    completion: @escaping (Result<GraphQLResult<Operation.Data>, any Error>) -> Void) {
     
     let urlRequest: URLRequest
     do {
       urlRequest = try request.toURLRequest()
     } catch {
-      chain.handleErrorAsync(error,
-                             request: request,
-                             response: response,
-                             completion: completion)
+      chain.handleErrorAsync(
+        error,
+        request: request,
+        response: response,
+        completion: completion
+      )
       return
     }
     
-    let task = self.client.sendRequest(urlRequest) { [weak self] result in
+    let taskDescription = "\(Operation.operationType) \(Operation.operationName)"
+    let task = self.client.sendRequest(urlRequest, taskDescription: taskDescription) { [weak self] result in
       guard let self = self else {
         return
       }
       
       defer {
-        self.currentTask.mutate { $0 = nil }
+        if Operation.operationType != .subscription {
+          self.$currentTask.mutate { $0 = nil }
+        }
       }
       
-      guard chain.isNotCancelled else {
+      guard !chain.isCancelled else {
         return
       }
       
       switch result {
       case .failure(let error):
-        chain.handleErrorAsync(error,
-                               request: request,
-                               response: response,
-                               completion: completion)
+        chain.handleErrorAsync(
+          error,
+          request: request,
+          response: response,
+          completion: completion
+        )
+
       case .success(let (data, httpResponse)):
-        let response = HTTPResponse<Operation>(response: httpResponse,
-                                               rawData: data,
-                                               parsedResponse: nil)
-        chain.proceedAsync(request: request,
-                           response: response,
-                           completion: completion)
+        let response = HTTPResponse<Operation>(
+          response: httpResponse,
+          rawData: data,
+          parsedResponse: nil
+        )
+
+        chain.proceedAsync(
+          request: request,
+          response: response,
+          interceptor: self,
+          completion: completion
+        )
       }
     }
     
-    self.currentTask.mutate { $0 = task }
+    self.$currentTask.mutate { $0 = task }
   }
   
   public func cancel() {
-    guard let task = self.currentTask.value else {
+    guard let task = self.currentTask else {
       return
     }
     

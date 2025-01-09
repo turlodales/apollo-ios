@@ -1,9 +1,12 @@
 import Foundation
+#if !COCOAPODS
+import ApolloAPI
+#endif
 
 /// A request class allowing for a multipart-upload request.
 open class UploadRequest<Operation: GraphQLOperation>: HTTPRequest<Operation> {
   
-  public let requestBodyCreator: RequestBodyCreator
+  public let requestBodyCreator: any RequestBodyCreator
   public let files: [GraphQLFile]
   public let manualBoundary: String?
   
@@ -19,6 +22,7 @@ open class UploadRequest<Operation: GraphQLOperation>: HTTPRequest<Operation> {
   ///   - additionalHeaders: Any additional headers you wish to add by default to this request. Defaults to an empty dictionary.
   ///   - files: The array of files to upload for all `Upload` parameters in the mutation.
   ///   - manualBoundary: [optional] A manual boundary to pass in. A default boundary will be used otherwise. Defaults to nil.
+  ///   - context: [optional] A context that is being passed through the request chain. Should default to `nil`.
   ///   - requestBodyCreator: An object conforming to the `RequestBodyCreator` protocol to assist with creating the request body. Defaults to the provided `ApolloRequestBodyCreator` implementation.
   public init(graphQLEndpoint: URL,
               operation: Operation,
@@ -27,7 +31,8 @@ open class UploadRequest<Operation: GraphQLOperation>: HTTPRequest<Operation> {
               additionalHeaders: [String: String] = [:],
               files: [GraphQLFile],
               manualBoundary: String? = nil,
-              requestBodyCreator: RequestBodyCreator = ApolloRequestBodyCreator()) {
+              context: (any RequestContext)? = nil,
+              requestBodyCreator: any RequestBodyCreator = ApolloRequestBodyCreator()) {
     self.requestBodyCreator = requestBodyCreator
     self.files = files
     self.manualBoundary = manualBoundary
@@ -36,7 +41,8 @@ open class UploadRequest<Operation: GraphQLOperation>: HTTPRequest<Operation> {
                contentType: "multipart/form-data",
                clientName: clientName,
                clientVersion: clientVersion,
-               additionalHeaders: additionalHeaders)
+               additionalHeaders: additionalHeaders,
+               context: context)
   }
   
   public override func toURLRequest() throws -> URLRequest {
@@ -56,8 +62,6 @@ open class UploadRequest<Operation: GraphQLOperation>: HTTPRequest<Operation> {
   /// - Throws: Any error arising from creating the form data
   /// - Returns: The created form data
   open func requestMultipartFormData() throws -> MultipartFormData {
-    let shouldSendOperationID = (self.operation.operationIdentifier != nil)
-
     let formData: MultipartFormData
 
     if let boundary = manualBoundary {
@@ -70,18 +74,16 @@ open class UploadRequest<Operation: GraphQLOperation>: HTTPRequest<Operation> {
     // for the files in the rest of the form data
     let fieldsForFiles = Set(files.map { $0.fieldName }).sorted()
     var fields = self.requestBodyCreator.requestBody(for: operation,
-                                                     sendOperationIdentifiers: shouldSendOperationID,
                                                      sendQueryDocument: true,
                                                      autoPersistQuery: false)
-    var variables = fields["variables"] as? GraphQLMap ?? GraphQLMap()
+    var variables = fields["variables"] as? JSONEncodableDictionary ?? JSONEncodableDictionary()
     for fieldName in fieldsForFiles {
-      if
-        let value = variables[fieldName],
-        let arrayValue = value as? [JSONEncodable] {
-        let arrayOfNils: [JSONEncodable?] = arrayValue.map { _ in nil }
-          variables.updateValue(arrayOfNils, forKey: fieldName)
+      if let value = variables[fieldName],
+         let arrayValue = value as? [any JSONEncodable] {
+        let arrayOfNils: [NSNull?] = arrayValue.map { _ in NSNull() }
+        variables.updateValue(arrayOfNils, forKey: fieldName)
       } else {
-        variables.updateValue(nil, forKey: fieldName)
+        variables.updateValue(NSNull(), forKey: fieldName)
       }
     }
     fields["variables"] = variables
@@ -124,5 +126,21 @@ open class UploadRequest<Operation: GraphQLOperation>: HTTPRequest<Operation> {
     }
 
     return formData
+  }
+
+  // MARK: - Equtable/Hashable Conformance
+
+  public static func == (lhs: UploadRequest<Operation>, rhs: UploadRequest<Operation>) -> Bool {
+    lhs as HTTPRequest<Operation> == rhs as HTTPRequest<Operation> &&
+    type(of: lhs.requestBodyCreator) == type(of: rhs.requestBodyCreator) &&
+    lhs.files == rhs.files &&
+    lhs.manualBoundary == rhs.manualBoundary
+  }
+
+  public override func hash(into hasher: inout Hasher) {
+    super.hash(into: &hasher)
+    hasher.combine("\(type(of: requestBodyCreator))")
+    hasher.combine(files)
+    hasher.combine(manualBoundary)    
   }
 }

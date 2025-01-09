@@ -1,6 +1,4 @@
-import Foundation
-
-public protocol NormalizedCache {
+public protocol NormalizedCache: AnyObject {
   
   /// Loads records corresponding to the given keys.
   ///

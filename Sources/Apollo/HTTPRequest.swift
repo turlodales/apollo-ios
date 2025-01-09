@@ -1,7 +1,10 @@
 import Foundation
+#if !COCOAPODS
+import ApolloAPI
+#endif
 
 /// Encapsulation of all information about a request before it hits the network
-open class HTTPRequest<Operation: GraphQLOperation> {
+open class HTTPRequest<Operation: GraphQLOperation>: Hashable {
   
   /// The endpoint to make a GraphQL request to
   open var graphQLEndpoint: URL
@@ -17,6 +20,9 @@ open class HTTPRequest<Operation: GraphQLOperation> {
   
   /// [optional] A unique identifier for this request, to help with deduping cache hits for watchers.
   public let contextIdentifier: UUID?
+
+  /// [optional] A context that is being passed through the request chain.
+  public let context: (any RequestContext)?
   
   /// Designated Initializer
   ///
@@ -29,6 +35,7 @@ open class HTTPRequest<Operation: GraphQLOperation> {
   ///   - clientVersion:  The version of the client to send with the `"apollographql-client-version"` header
   ///   - additionalHeaders: Any additional headers you wish to add by default to this request.
   ///   - cachePolicy: The `CachePolicy` to use for this request. Defaults to the `.default` policy
+  ///   - context: [optional] A context that is being passed through the request chain. Defaults to `nil`.
   public init(graphQLEndpoint: URL,
               operation: Operation,
               contextIdentifier: UUID? = nil,
@@ -36,12 +43,14 @@ open class HTTPRequest<Operation: GraphQLOperation> {
               clientName: String,
               clientVersion: String,
               additionalHeaders: [String: String],
-              cachePolicy: CachePolicy = .default) {
+              cachePolicy: CachePolicy = .default,
+              context: (any RequestContext)? = nil) {
     self.graphQLEndpoint = graphQLEndpoint
     self.operation = operation
     self.contextIdentifier = contextIdentifier
     self.additionalHeaders = additionalHeaders
     self.cachePolicy = cachePolicy
+    self.context = context
     
     self.addHeader(name: "Content-Type", value: contentType)
     // Note: in addition to this being a generally useful header to send, Apollo
@@ -53,9 +62,9 @@ open class HTTPRequest<Operation: GraphQLOperation> {
     // CSRF prevention enabled. See
     // https://www.apollographql.com/docs/apollo-server/security/cors/#preventing-cross-site-request-forgery-csrf
     // for details.
-    self.addHeader(name: "X-APOLLO-OPERATION-NAME", value: self.operation.operationName)
-    self.addHeader(name: "X-APOLLO-OPERATION-TYPE", value: String(describing: operation.operationType))
-    if let operationID = self.operation.operationIdentifier {
+    self.addHeader(name: "X-APOLLO-OPERATION-NAME", value: Operation.operationName)
+    self.addHeader(name: "X-APOLLO-OPERATION-TYPE", value: String(describing: Operation.operationType))
+    if let operationID = Operation.operationIdentifier {
       self.addHeader(name: "X-APOLLO-OPERATION-ID", value: operationID)
     }
     
@@ -84,16 +93,23 @@ open class HTTPRequest<Operation: GraphQLOperation> {
     
     return request
   }
-}
 
-extension HTTPRequest: Equatable {
-  
+  // MARK: - Hashable Conformance
+
+  public func hash(into hasher: inout Hasher) {
+    hasher.combine(graphQLEndpoint)
+    hasher.combine(operation)
+    hasher.combine(additionalHeaders)
+    hasher.combine(cachePolicy)
+    hasher.combine(contextIdentifier)
+  }
+
   public static func == (lhs: HTTPRequest<Operation>, rhs: HTTPRequest<Operation>) -> Bool {
-    lhs.graphQLEndpoint == rhs.graphQLEndpoint
-      && lhs.contextIdentifier == rhs.contextIdentifier
-      && lhs.additionalHeaders == rhs.additionalHeaders
-      && lhs.cachePolicy == rhs.cachePolicy
-      && lhs.operation.queryDocument == rhs.operation.queryDocument
+    lhs.graphQLEndpoint == rhs.graphQLEndpoint &&
+    lhs.operation == rhs.operation &&
+    lhs.additionalHeaders == rhs.additionalHeaders &&
+    lhs.cachePolicy == rhs.cachePolicy &&
+    lhs.contextIdentifier == rhs.contextIdentifier
   }
 }
 
